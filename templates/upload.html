@@ -1,0 +1,18 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Upload Receipt</title>
+</head>
+<body>
+  <h2>Upload a Receipt Image</h2>
+  <form action="/v1/reciepts" method="POST" enctype="multipart/form-data">
+    <label>Receipt Image:</label>
+    <input type="file" name="reciept" required />
+    <br />
+    <label>Instance ID:</label>
+    <input type="text" name="instance_id" required />
+    <br />
+    <button type="submit">Upload</button>
+  </form>
+</body>
+</html>
