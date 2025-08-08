@@ -1,0 +1,146 @@
+# Receipt Spending Analyzer API
+
+## 📌 Introduction
+
+The **Receipt Spending Analyzer API** is a Flask-based service that allows users to scan receipts, automatically categorize purchases using AI, generate insightful spending reports, and receive personalized financial advice. It integrates LLM-based categorization, CSV-based storage for lightweight persistence, and data visualization capabilities to help users better understand and optimize their spending habits.
+
+---
+
+## ✨ Features
+
+* **Workspace Management** – Create, list, update, and delete budget workspaces.
+* **Category Management** – Add, rename, and remove expense categories.
+* **Receipt Processing** – Upload, parse, and correct scanned receipts.
+* **Transactions & Budgets** – Query transactions and set spending limits.
+* **Reports & Analytics** – Generate numeric reports, charts, and CSV exports.
+* **AI Insights & Advice** – Get spending forecasts, anomaly detection, and tips.
+* **Health Check** – Ensure the service is running.
+
+---
+
+## 🛠 Tech Stack
+
+* **Backend Framework**: Flask (Python)
+* **AI Processing**: OpenAI API
+* **Data Handling**: Pandas (CSV-based storage)
+* **Image Processing**: OpenAI Vision / Multi-Modal LLM
+* **Visualization**: Matplotlib / Plotly
+* **Environment**: Python 3.9+
+
+---
+
+## 📡 API Endpoints
+
+### **1 Workspace / Instance Management**
+
+* `POST /v1/instances` – Create Workspace
+* `GET /v1/instances` – List Workspaces
+* `GET /v1/instances/{id}` – Get Workspace Details
+* `PUT /v1/instances/{id}` – Rename / Update Workspace
+* `DELETE /v1/instances/{id}` – Delete Workspace
+
+### **2 Category Management**
+
+* `POST /v1/instances/{id}/initialize` – Bulk Initialise Categories
+* `POST /v1/instances/{id}/categories` – Add Single Category
+* `PUT /v1/categories/{cat_id}` – Rename Category
+* `DELETE /v1/categories/{cat_id}` – Delete Category
+
+### **3 Receipt Upload & Parsing**
+
+* `POST /v1/receipts` – Upload & Parse Receipt
+* `GET /v1/receipts/{receipt_id}` – Retrieve Parsed Receipt
+* `PATCH /v1/receipts/{receipt_id}` – Correct Parsed Receipt
+
+### **4 Transactions & Budgets**
+
+* `GET /v1/instances/{id}/transactions` – List Transactions
+* `POST /v1/instances/{id}/budgets` – Create / Update Budget
+* `GET /v1/instances/{id}/budgets` – Get Budget Utilisation
+
+### **5 Reports, Graphs, Export**
+
+* `GET /v1/instances/{id}/reports` – Numeric Reports
+* `GET /v1/instances/{id}/graphs` – Chart Generator
+* `GET /v1/instances/{id}/export` – CSV Export
+
+### **6 Insights & Advice**
+
+* `POST /v1/instances/{id}/advice` – Generate Advice
+* `POST /v1/instances/{id}/chat` – Conversational Chat
+* `GET /v1/instances/{id}/insights` – Predictive Insights
+
+### **7 Health Check**
+
+* `GET /v1/health` – Service Liveness
+
+---
+
+## 🔑 Environment Variables
+
+Create a `.env` file in the root of the project:
+
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+```
+
+---
+
+## ⚙️ Installation Guide
+
+### 1️⃣ Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/receipt-spending-analyzer.git
+cd receipt-spending-analyzer
+```
+
+### 2️⃣ Create a Virtual Environment
+
+```bash
+python -m venv venv
+```
+
+### 3️⃣ Activate the Environment
+
+* **Windows**
+
+```bash
+venv\Scripts\activate
+```
+
+* **Mac/Linux**
+
+```bash
+source venv/bin/activate
+```
+
+### 4️⃣ Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 5️⃣ Set Environment Variables
+
+Create `.env` file and add:
+
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+```
+
+### 6️⃣ Run the Flask Server
+
+```bash
+flask run
+```
+
+The API will be available at `http://127.0.0.1:5000`.
+
+---
+
+## 📜 License
+
+This project is licensed under the **MIT License** – you’re free to use, modify, and distribute it as long as attribution is provided.
+
+
