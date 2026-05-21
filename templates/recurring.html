@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subscription Radar · Receipt Spending Analyzer</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --panel-2: #1c232d;
+      --border: #2a3441;
+      --text: #e6edf3;
+      --muted: #8b98a5;
+      --accent: #4ade80;
+      --accent-2: #38bdf8;
+      --amber: #fbbf24;
+      --red: #f87171;
+      --violet: #c084fc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1200px 600px at 80% -10%, #14301f 0%, transparent 55%),
+                  radial-gradient(900px 500px at -10% 10%, #0e2436 0%, transparent 50%),
+                  var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px 80px; }
+    header { padding: 56px 0 22px; }
+    a.back { color: var(--muted); text-decoration: none; font-size: 14px; }
+    a.back:hover { color: var(--text); }
+    h1 { font-size: 34px; margin: 14px 0 6px; letter-spacing: -0.02em; }
+    h1 .em { color: var(--accent); }
+    .sub { color: var(--muted); margin: 0 0 26px; max-width: 640px; }
+    .controls {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px; margin-bottom: 26px;
+    }
+    .controls input {
+      flex: 1 1 260px; min-width: 200px;
+      background: var(--panel-2); border: 1px solid var(--border);
+      color: var(--text); padding: 11px 13px; border-radius: 10px; font-size: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .controls input:focus { outline: none; border-color: var(--accent-2); }
+    .controls button {
+      background: var(--accent); color: #06210f; border: none; font-weight: 700;
+      padding: 11px 20px; border-radius: 10px; font-size: 14px; cursor: pointer;
+    }
+    .controls button:hover { filter: brightness(1.08); }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 26px; }
+    .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+    .stat .label { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat .value { font-size: 28px; font-weight: 700; margin-top: 6px; }
+    .stat .value.green { color: var(--accent); }
+    .stat .value.amber { color: var(--amber); }
+    .cards { display: grid; gap: 14px; }
+    .rc {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+      padding: 18px 20px; display: grid;
+      grid-template-columns: 1fr auto; gap: 6px 16px; align-items: center;
+    }
+    .rc .name { font-size: 17px; font-weight: 650; }
+    .rc .meta { color: var(--muted); font-size: 13px; }
+    .rc .amt { font-size: 20px; font-weight: 700; text-align: right; }
+    .rc .amt small { display: block; color: var(--muted); font-size: 12px; font-weight: 500; margin-top: 2px; }
+    .pill {
+      display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 9px;
+      border-radius: 999px; margin-right: 6px; border: 1px solid var(--border);
+      background: var(--panel-2); color: var(--accent-2);
+    }
+    .pill.cat { color: var(--violet); }
+    .next { color: var(--amber); }
+    .conf { display: inline-flex; align-items: center; gap: 6px; }
+    .bar { width: 54px; height: 6px; border-radius: 999px; background: var(--panel-2); overflow: hidden; }
+    .bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+    .msg { color: var(--muted); background: var(--panel); border: 1px dashed var(--border); border-radius: 14px; padding: 34px; text-align: center; }
+    footer { color: var(--muted); font-size: 13px; text-align: center; margin-top: 46px; }
+    @media (max-width: 560px) { .rc { grid-template-columns: 1fr; } .rc .amt { text-align: left; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="back" href="/">← API home</a>
+      <h1>📡 Subscription <span class="em">Radar</span></h1>
+      <p class="sub">Finds the charges that quietly repeat — subscriptions, memberships, weekly runs — predicts the next hit, and shows what they cost you over a year.</p>
+      <div class="controls">
+        <input id="instanceInput" placeholder="paste an instance id (workspace uuid)…" />
+        <button id="scanBtn">Scan</button>
+      </div>
+    </header>
+
+    <div id="stats" class="stats" style="display:none;">
+      <div class="stat"><div class="label">Recurring charges</div><div id="sCount" class="value">–</div></div>
+      <div class="stat"><div class="label">Projected / month</div><div id="sMonth" class="value amber">–</div></div>
+      <div class="stat"><div class="label">Projected / year</div><div id="sYear" class="value green">–</div></div>
+    </div>
+
+    <div id="cards" class="cards"></div>
+    <div id="msg" class="msg">Enter an instance id above and hit <strong>Scan</strong> to sweep for recurring charges.</div>
+
+    <footer>Receipt Spending Analyzer · Subscription Radar</footer>
+  </div>
+
+  <script>
+    const fmt = n => (n ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const el = id => document.getElementById(id);
+
+    async function scan(instanceId) {
+      const msg = el("msg"), cards = el("cards"), stats = el("stats");
+      cards.innerHTML = ""; stats.style.display = "none";
+      msg.style.display = "block"; msg.textContent = "Scanning…";
+      if (!instanceId) { msg.textContent = "Please enter an instance id."; return; }
+
+      try {
+        const r = await fetch(`/v1/instances/${encodeURIComponent(instanceId)}/recurring`);
+        const data = await r.json();
+        if (!r.ok) { msg.textContent = data.error || "Could not load recurring charges."; return; }
+
+        el("sCount").textContent = data.recurring_count;
+        el("sMonth").textContent = "PKR " + fmt(data.total_estimated_monthly);
+        el("sYear").textContent = "PKR " + fmt(data.total_estimated_annual);
+
+        if (!data.recurring.length) {
+          msg.textContent = "No recurring charges detected yet — need at least 3 evenly-spaced charges of the same item.";
+          stats.style.display = "grid";
+          return;
+        }
+        msg.style.display = "none";
+        stats.style.display = "grid";
+
+        cards.innerHTML = data.recurring.map(rc => `
+          <div class="rc">
+            <div>
+              <div class="name">${escapeHtml(rc.item)}</div>
+              <div class="meta">
+                <span class="pill">${rc.cadence}</span>
+                <span class="pill cat">${escapeHtml(rc.category)}</span>
+                ${rc.occurrences}× seen · next ≈ <span class="next">${rc.next_expected}</span>
+                &nbsp;·&nbsp;
+                <span class="conf" title="detection confidence">
+                  <span class="bar"><span style="width:${Math.round(rc.confidence*100)}%"></span></span>
+                  ${Math.round(rc.confidence*100)}%
+                </span>
+              </div>
+            </div>
+            <div class="amt">PKR ${fmt(rc.avg_amount)}<small>≈ PKR ${fmt(rc.estimated_annual)}/yr</small></div>
+          </div>
+        `).join("");
+      } catch (e) {
+        msg.style.display = "block";
+        msg.textContent = "Request failed: " + e.message;
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    }
+
+    el("scanBtn").addEventListener("click", () => scan(el("instanceInput").value.trim()));
+    el("instanceInput").addEventListener("keydown", e => { if (e.key === "Enter") scan(el("instanceInput").value.trim()); });
+
+    // Deep-link support: /recurring?instance=<id>
+    const params = new URLSearchParams(location.search);
+    const pre = params.get("instance");
+    if (pre) { el("instanceInput").value = pre; scan(pre); }
+  </script>
+</body>
+</html>
