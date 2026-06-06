@@ -1,11 +1,23 @@
-import openai
 import os
 import json
 from dotenv import load_dotenv
 from app.services.reports import instance_report
 
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# openai is imported lazily to keep app startup fast — importing this module no
+# longer drags in the openai client. The module-level name below doubles as a
+# seam tests can monkeypatch with a stub.
+openai = None
+
+
+def _get_openai():
+    """Return the openai client, importing it on first use."""
+    global openai
+    if openai is None:
+        import openai as _openai
+        openai = _openai
+    return openai
 
 # Pass instance ID and optional focus to get suggestions
 def llm_advice(id: str, focus: str = None):
@@ -38,7 +50,9 @@ Return only a valid JSON object with a "suggestions" field. No commentary, no ex
 '''
 
     try:
-        response = openai.chat.completions.create(
+        client = _get_openai()
+        client.api_key = os.getenv("OPENAI_API_KEY")
+        response = client.chat.completions.create(
             model='gpt-4o',
             messages=[
                 {

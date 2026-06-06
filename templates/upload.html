@@ -3,13 +3,42 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
   <title>Upload a Receipt · Spending Analyzer</title>
+  <meta name="description" content="Drag-and-drop a receipt photo and watch an LLM parse every line item, price, vendor and date into clean JSON." />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#0d1117" />
+  <link rel="canonical" href="{{ canonical_url }}" />
+
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/static/site.webmanifest" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Receipt Spending Analyzer" />
+  <meta property="og:title" content="Upload a Receipt · Spending Analyzer" />
+  <meta property="og:description" content="Drag-and-drop a receipt photo and watch an LLM parse every line item into clean JSON." />
+  <meta property="og:url" content="{{ canonical_url }}" />
+  <meta property="og:image" content="{{ base_url }}/static/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="{{ base_url }}/static/og-image.png" />
   <style>
     :root {
       --bg: #0d1117; --panel: #161b22; --border: #2a3441;
       --text: #e6edf3; --muted: #8b98a5; --accent: #4ade80; --accent-2: #38bdf8;
     }
     * { box-sizing: border-box; }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+    }
+    /* Visible keyboard focus indicator on every interactive control. */
+    a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+      outline: 3px solid var(--accent-2);
+      outline-offset: 3px;
+    }
     body {
       margin: 0; min-height: 100vh;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
@@ -49,6 +78,21 @@
     button:hover { transform: translateY(-2px); }
     button:disabled { opacity: .55; cursor: default; transform: none; }
     .filename { margin-top: 10px; font-size: .85rem; color: var(--accent); word-break: break-all; }
+    .preview {
+      margin-top: 14px; display: none; align-items: center; gap: 14px;
+      padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: #12181f;
+      animation: fade .3s ease;
+    }
+    .preview.show { display: flex; }
+    .preview img { width: 64px; height: 64px; object-fit: cover; border-radius: 9px; border: 1px solid var(--border); }
+    .preview .meta { font-size: .82rem; color: var(--muted); overflow: hidden; }
+    .preview .meta b { color: var(--text); display: block; word-break: break-all; }
+    @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    /* Animated loading dots for the parsing state */
+    .loading { display: inline-flex; gap: 5px; align-items: center; color: var(--accent-2); }
+    .loading i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-2); display: inline-block; animation: bounce 1s infinite ease-in-out; }
+    .loading i:nth-child(2){ animation-delay: .15s; } .loading i:nth-child(3){ animation-delay: .3s; }
+    @keyframes bounce { 0%,80%,100%{ transform: scale(.5); opacity:.4; } 40%{ transform: scale(1); opacity:1; } }
     pre {
       margin-top: 20px; background: #0b0f14; border: 1px solid var(--border); border-radius: 12px;
       padding: 16px; overflow-x: auto; font-size: .82rem; color: #cbd5e1; max-height: 340px;
@@ -56,47 +100,89 @@
     }
     .hint { margin-top: 14px; font-size: .8rem; color: var(--muted); }
     .hint code { color: var(--accent-2); }
+
+    /* Respect reduced-motion preferences. */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        transition-duration: 0.001ms !important;
+      }
+      button:hover { transform: none; }
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <a class="back" href="/">← back to overview</a>
-    <h1>📸 Upload a receipt</h1>
+  <main class="card">
+    <a class="back" href="/"><span aria-hidden="true">←</span> back to overview</a>
+    <h1><span aria-hidden="true">📸</span> Upload a receipt</h1>
     <p class="sub">Drop a photo and we'll read the line items, prices and vendor for you.</p>
 
     <form id="form">
-      <label>Receipt image</label>
-      <div class="drop" id="drop">
-        <div class="big">🧾</div>
+      <label id="fileLabel" for="file">Receipt image</label>
+      <div class="drop" id="drop" role="button" tabindex="0"
+           aria-labelledby="fileLabel dropText" aria-describedby="dropHelp">
+        <div class="big" aria-hidden="true">🧾</div>
         <span id="dropText">Click to choose or drag an image here</span>
-        <small>JPG or PNG</small>
+        <small id="dropHelp">JPG or PNG</small>
         <input type="file" id="file" name="reciept" accept="image/*" required />
       </div>
-      <div class="filename" id="filename"></div>
+      <p class="filename" id="filename" aria-live="polite"></p>
+      <div class="preview" id="preview">
+        <img id="previewImg" alt="receipt preview" />
+        <div class="meta"><b id="previewName"></b><span id="previewSize"></span></div>
+      </div>
 
-      <label>Instance ID</label>
+      <label for="instance">Instance ID</label>
       <input type="text" id="instance" name="instance_id" placeholder="your-workspace-uuid" />
 
       <button type="submit" id="submit">Analyze receipt</button>
     </form>
 
-    <div class="hint">
+    <p class="hint">
       Tip: create a workspace first with <code>POST /v1/instances</code> and paste its id above.
-    </div>
+    </p>
 
-    <pre id="out" hidden></pre>
-  </div>
+    <h2 class="sr-only">Parsing result</h2>
+    <pre id="out" role="status" aria-live="polite" aria-label="Receipt parsing result" hidden></pre>
+  </main>
 
   <script>
     const drop = document.getElementById("drop");
     const file = document.getElementById("file");
+    const dropText = document.getElementById("dropText");
     const filename = document.getElementById("filename");
     const out = document.getElementById("out");
     const btn = document.getElementById("submit");
 
+    const preview = document.getElementById("preview");
+    const previewImg = document.getElementById("previewImg");
+    const previewName = document.getElementById("previewName");
+    const previewSize = document.getElementById("previewSize");
+
+    function humanSize(b) {
+      if (b < 1024) return b + " B";
+      if (b < 1048576) return (b / 1024).toFixed(1) + " KB";
+      return (b / 1048576).toFixed(1) + " MB";
+    }
+
     drop.addEventListener("click", () => file.click());
+    // Keyboard support: the drop zone is a role="button", so Enter/Space must
+    // open the file picker just like a real button would.
+    drop.addEventListener("keydown", ev => {
+      if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); file.click(); }
+    });
     file.addEventListener("change", () => {
-      filename.textContent = file.files[0] ? "Selected: " + file.files[0].name : "";
+      const f = file.files[0];
+      filename.textContent = f ? "Selected: " + f.name : "";
+      dropText.textContent = f ? f.name : "Click to choose or drag an image here";
+      if (f && f.type.startsWith("image/")) {
+        previewImg.src = URL.createObjectURL(f);
+        previewName.textContent = f.name;
+        previewSize.textContent = humanSize(f.size);
+        preview.classList.add("show");
+      } else {
+        preview.classList.remove("show");
+      }
     });
     ["dragover","dragenter"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add("over"); }));
     ["dragleave","drop"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove("over"); }));
@@ -108,7 +194,8 @@
       ev.preventDefault();
       if (!file.files[0]) return;
       btn.disabled = true; btn.textContent = "Reading receipt…";
-      out.hidden = false; out.textContent = "⏳ Sending image to the parser…";
+      out.hidden = false;
+      out.innerHTML = '<span class="loading"><i></i><i></i><i></i></span>&nbsp; Sending image to the parser…';
       const fd = new FormData();
       fd.append("reciept", file.files[0]);
       fd.append("instance_id", document.getElementById("instance").value || "demo");

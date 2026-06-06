@@ -1,4 +1,3 @@
-import openai
 import os
 import base64
 import pandas as pd
@@ -6,7 +5,11 @@ from dotenv import load_dotenv
 import json
 
 load_dotenv()
-openai.api_key = os.getenv('OPENAI_API_KEY')
+
+# openai is imported lazily inside the parsing call (see below) so that simply
+# importing this module — which happens on app startup via the blueprint chain —
+# does not pull in the openai client. Keeps boot fast for the many code paths
+# that never call the vision model.
 
 
 def image_to_base64(image_path):
@@ -62,6 +65,8 @@ def reciept_parser(img_id, instance_id):
     }}
     """
 
+    import openai
+    openai.api_key = os.getenv('OPENAI_API_KEY')
     response = openai.chat.completions.create(
         model='gpt-4o',
         messages=[

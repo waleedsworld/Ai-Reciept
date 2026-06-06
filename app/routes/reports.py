@@ -1,10 +1,12 @@
 from flask import Blueprint, request,jsonify,send_file,abort
 import os
 from app.services.graphs import get_bar_chart_data ,get_line_chart_data,get_pie_chart_data
-import matplotlib
-matplotlib.use('Agg')  # Use non-GUI backend for server environments
-import matplotlib.pyplot as plt
 from app.services.reports import instance_report
+
+# NOTE: matplotlib is a heavy import (drags in numpy, fonts, C extensions) and
+# is only needed by the chart-rendering endpoint. Importing it lazily inside
+# save_chart() keeps app startup fast — the landing page, health check and the
+# JSON API no longer pay the matplotlib import cost on boot.
 
 
 report_bp = Blueprint('report_bp',__name__)
@@ -23,6 +25,9 @@ def get_instance_reports(id):
 CHARTS_PATH = "storage/charts"
 
 def save_chart(fig, filename):
+    import matplotlib
+    matplotlib.use('Agg')  # Non-GUI backend for server environments
+    import matplotlib.pyplot as plt
     os.makedirs(CHARTS_PATH, exist_ok=True)
     full_path = os.path.join(CHARTS_PATH, filename)
     fig.savefig(full_path, bbox_inches='tight')

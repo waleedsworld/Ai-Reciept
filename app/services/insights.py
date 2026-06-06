@@ -1,5 +1,4 @@
 from flask import request, jsonify
-import openai
 import os
 from dotenv import load_dotenv
 from app.services.reports import instance_report
@@ -7,7 +6,21 @@ import json
 
 # Load env vars
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# openai is imported lazily to keep startup fast — this service module is
+# imported at boot via the insights blueprint, but the openai client is only
+# pulled in when a chat request actually arrives. The module-level name below
+# doubles as a seam tests can monkeypatch with a stub.
+openai = None
+
+
+def _get_openai():
+    """Return the openai client, importing it on first use."""
+    global openai
+    if openai is None:
+        import openai as _openai
+        openai = _openai
+    return openai
 
 # In-memory memory store
 chat_memory = {}
@@ -42,7 +55,9 @@ def handle_chat(id,message):
     messages = [build_system_message(report_data)] + build_message_log(id, message)
 
     try:
-        response = openai.chat.completions.create(
+        client = _get_openai()
+        client.api_key = os.getenv("OPENAI_API_KEY")
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=messages
         )
