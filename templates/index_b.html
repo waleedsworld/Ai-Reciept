@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Receipt Spending Analyzer API · Variant B</title>
+  <style>
+    /* ---------------------------------------------------------------
+       LANDING VARIANT B  (?variant=b)
+       A/B alternate to templates/index.html. Deliberately distinct:
+         - benefit-led headline ("Stop losing money to paper receipts")
+         - two-column split hero (copy left, live terminal demo right)
+         - single high-intent CTA ("Start scanning — it's free")
+         - warmer amber/indigo palette instead of the green/cyan default
+       Same endpoints + live health probe as variant A.
+    ----------------------------------------------------------------- */
+    :root {
+      --bg: #0b0a12;
+      --panel: #16131f;
+      --panel-2: #1e1a2b;
+      --border: #2c2740;
+      --text: #f2eefb;
+      --muted: #9a92ad;
+      --accent: #f59e0b;
+      --accent-2: #818cf8;
+      --get: #818cf8;
+      --post: #34d399;
+      --put: #f59e0b;
+      --del: #f87171;
+      --patch: #c084fc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1100px 560px at 15% -10%, #2a1c04 0%, transparent 55%),
+                  radial-gradient(900px 520px at 110% 20%, #1a1740 0%, transparent 52%),
+                  var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1040px; margin: 0 auto; padding: 0 22px 80px; }
+
+    /* ---- split hero ---- */
+    header { padding: 60px 0 30px; display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 44px; align-items: center; }
+    @media (max-width: 820px) { header { grid-template-columns: 1fr; gap: 30px; padding-top: 46px; } }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--panel); border: 1px solid var(--border);
+      color: var(--muted); font-size: 13px; padding: 6px 12px; border-radius: 999px;
+    }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+    .dot.live { background: var(--post); animation: pulse 2s infinite; }
+    .dot.down { background: var(--del); }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(52,211,153,.5); }
+      70% { box-shadow: 0 0 0 8px rgba(52,211,153,0); }
+      100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); }
+    }
+    h1 {
+      font-size: clamp(2.1rem, 5.4vw, 3.2rem); margin: 20px 0 14px; line-height: 1.05;
+      letter-spacing: -0.025em; font-weight: 800;
+      background: linear-gradient(115deg, #fff 18%, #fbd38d 60%, #a5b4fc);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .lede { color: var(--muted); font-size: 1.14rem; max-width: 520px; }
+    .lede b { color: var(--text); font-weight: 600; }
+    .cta { margin-top: 28px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 9px; text-decoration: none;
+      padding: 13px 22px; border-radius: 12px; font-weight: 700; font-size: 15.5px;
+      border: 1px solid var(--border); color: var(--text); background: var(--panel);
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+    .btn.primary {
+      background: linear-gradient(115deg, #f59e0b, #fbbf24); border: none; color: #241701;
+      box-shadow: 0 10px 30px -8px rgba(245,158,11,.55);
+    }
+    .btn.primary:hover { transform: translateY(-2px); box-shadow: 0 16px 40px -8px rgba(245,158,11,.7); }
+    .ghost { color: var(--muted); text-decoration: none; font-size: 14.5px; }
+    .ghost:hover { color: var(--text); }
+
+    /* ---- terminal demo (right column) ---- */
+    .term {
+      background: #0d0b16; border: 1px solid var(--border); border-radius: 14px;
+      box-shadow: 0 24px 70px -20px rgba(0,0,0,.7); overflow: hidden;
+    }
+    .term .bar { display: flex; gap: 7px; padding: 12px 14px; border-bottom: 1px solid var(--border); background: var(--panel); }
+    .term .bar i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+    .term .bar i:nth-child(1) { background: #f87171; }
+    .term .bar i:nth-child(2) { background: #fbbf24; }
+    .term .bar i:nth-child(3) { background: #34d399; }
+    .term pre {
+      margin: 0; padding: 18px 16px; font-family: "SF Mono", ui-monospace, Menlo, monospace;
+      font-size: .82rem; line-height: 1.7; color: var(--text); overflow-x: auto;
+    }
+    .term .k { color: var(--accent); } .term .g { color: var(--post); }
+    .term .b { color: var(--accent-2); } .term .m { color: var(--muted); }
+
+    /* ---- proof strip ---- */
+    .strip { display: flex; gap: 26px; flex-wrap: wrap; margin: 22px 0 10px; color: var(--muted); font-size: .9rem; }
+    .strip b { color: var(--text); }
+
+    /* ---- endpoints (compact, shared shape with variant A) ---- */
+    h2 { margin: 52px 0 6px; font-size: 1.4rem; letter-spacing: -0.01em; }
+    .sub { color: var(--muted); margin: 0 0 18px; font-size: .95rem; }
+    .group { margin-bottom: 22px; }
+    .group-title { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; }
+    .ep {
+      display: flex; align-items: center; gap: 12px; padding: 11px 14px;
+      background: var(--panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px;
+      font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: .88rem;
+    }
+    .mm { font-weight: 700; font-size: .72rem; padding: 3px 8px; border-radius: 6px; min-width: 52px; text-align: center; letter-spacing: .04em; }
+    .mm.GET { color: var(--get); background: rgba(129,140,248,.13); }
+    .mm.POST { color: var(--post); background: rgba(52,211,153,.13); }
+    .mm.PUT { color: var(--put); background: rgba(245,158,11,.13); }
+    .mm.DELETE { color: var(--del); background: rgba(248,113,113,.13); }
+    .mm.PATCH { color: var(--patch); background: rgba(192,132,252,.13); }
+    .path { color: var(--text); overflow-x: auto; white-space: nowrap; }
+    .desc { color: var(--muted); margin-left: auto; font-size: .82rem; white-space: nowrap; }
+    @media (max-width: 620px) { .desc { display: none; } }
+
+    footer { margin-top: 50px; padding-top: 22px; border-top: 1px solid var(--border); color: var(--muted); font-size: .85rem; }
+    footer a { color: var(--accent-2); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="hero-copy">
+        <span class="badge"><span id="statusDot" class="dot"></span><span id="statusText">checking API…</span></span>
+        <h1>Stop losing money to paper receipts.</h1>
+        <p class="lede">
+          Point your phone at any receipt and it becomes <b>clean line items,
+          categories and a budget</b> in seconds — then an AI tells you exactly
+          where the money went and how to keep more of it. No spreadsheets, no database.
+        </p>
+        <div class="cta">
+          <a class="btn primary" href="/upload">Start scanning — it's free →</a>
+          <a class="ghost" href="#api">or browse the API ↓</a>
+        </div>
+        <div class="strip">
+          <span><b>1 photo</b> → parsed receipt</span>
+          <span><b>18</b> REST endpoints</span>
+          <span><b>0</b> databases to run</span>
+        </div>
+      </div>
+
+      <div class="term" aria-hidden="true">
+        <div class="bar"><i></i><i></i><i></i></div>
+<pre><span class="m"># snap a receipt, get structured JSON back</span>
+<span class="k">$</span> curl -F reciept=@lunch.jpg localhost:5000/v1/reciepts
+{
+  <span class="b">"vendor"</span>: <span class="g">"Blue Bottle Coffee"</span>,
+  <span class="b">"total"</span>: <span class="g">14.80</span>,
+  <span class="b">"items"</span>: [
+    { <span class="b">"name"</span>: <span class="g">"Latte"</span>,   <span class="b">"category"</span>: <span class="g">"Coffee"</span> },
+    { <span class="b">"name"</span>: <span class="g">"Croissant"</span>, <span class="b">"category"</span>: <span class="g">"Food"</span> }
+  ],
+  <span class="b">"advice"</span>: <span class="g">"Coffee is 22% over budget this week ☕"</span>
+}</pre>
+      </div>
+    </header>
+
+    <h2 id="api">API reference</h2>
+    <p class="sub">Base URL <code>/v1</code> · Bearer token auth · JSON in, JSON out.</p>
+
+    <div class="group">
+      <p class="group-title">Workspaces</p>
+      <div class="ep"><span class="mm POST">POST</span><span class="path">/v1/instances</span><span class="desc">Create workspace</span></div>
+      <div class="ep"><span class="mm GET">GET</span><span class="path">/v1/instances</span><span class="desc">List workspaces</span></div>
+      <div class="ep"><span class="mm PUT">PUT</span><span class="path">/v1/instances/&lt;id&gt;</span><span class="desc">Rename / archive</span></div>
+      <div class="ep"><span class="mm DELETE">DELETE</span><span class="path">/v1/instances/&lt;id&gt;</span><span class="desc">Delete workspace</span></div>
+    </div>
+
+    <div class="group">
+      <p class="group-title">Categories</p>
+      <div class="ep"><span class="mm POST">POST</span><span class="path">/v1/instances/&lt;id&gt;/initialize</span><span class="desc">Bulk seed categories</span></div>
+      <div class="ep"><span class="mm POST">POST</span><span class="path">/v1/instances/&lt;id&gt;/categories</span><span class="desc">Add category</span></div>
+      <div class="ep"><span class="mm PUT">PUT</span><span class="path">/v1/categories/&lt;cat_id&gt;</span><span class="desc">Rename category</span></div>
+      <div class="ep"><span class="mm DELETE">DELETE</span><span class="path">/v1/categories/&lt;cat_id&gt;</span><span class="desc">Delete category</span></div>
+    </div>
+
+    <div class="group">
+      <p class="group-title">Receipts</p>
+      <div class="ep"><span class="mm POST">POST</span><span class="path">/v1/reciepts</span><span class="desc">Upload &amp; parse</span></div>
+      <div class="ep"><span class="mm GET">GET</span><span class="path">/v1/reciepts/&lt;id&gt;</span><span class="desc">Fetch parsed receipt</span></div>
+      <div class="ep"><span class="mm PATCH">PATCH</span><span class="path">/v1/reciepts/&lt;id&gt;</span><span class="desc">Correct line items</span></div>
+    </div>
+
+    <div class="group">
+      <p class="group-title">Reports &amp; insights</p>
+      <div class="ep"><span class="mm GET">GET</span><span class="path">/v1/instances/&lt;id&gt;/reports</span><span class="desc">Numeric report</span></div>
+      <div class="ep"><span class="mm GET">GET</span><span class="path">/v1/instances/&lt;id&gt;/graphs</span><span class="desc">Chart data</span></div>
+      <div class="ep"><span class="mm POST">POST</span><span class="path">/v1/instances/&lt;id&gt;/advice</span><span class="desc">AI saving advice</span></div>
+      <div class="ep"><span class="mm POST">POST</span><span class="path">/v1/instances/&lt;id&gt;/chat</span><span class="desc">Spending chatbot</span></div>
+    </div>
+
+    <footer>
+      Receipt Spending Analyzer · you're viewing <b>landing variant B</b> · <a href="/">see variant A →</a>
+    </footer>
+  </div>
+
+  <script>
+    fetch("/v1/health")
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(d => {
+        document.getElementById("statusDot").className = "dot live";
+        document.getElementById("statusText").textContent = "API online · " + (d.status || "ok");
+      })
+      .catch(() => {
+        document.getElementById("statusDot").className = "dot down";
+        document.getElementById("statusText").textContent = "API offline";
+      });
+  </script>
+</body>
+</html>
