@@ -3,7 +3,64 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Receipt Spending Analyzer API</title>
+  <meta name="color-scheme" content="dark" />
+  <title>Receipt Spending Analyzer — Scan receipts, auto-categorise & get AI budget advice</title>
+  <meta name="description" content="A self-hostable Flask API that reads receipt photos with an LLM, auto-categorises every line item, and turns them into reports, budgets and AI-powered saving advice. No database required." />
+  <meta name="keywords" content="receipt scanner, receipt OCR, spending analyzer, expense tracker, budgeting API, LLM receipt parser, Flask API, AI finance, self-hosted budget tool" />
+  <meta name="author" content="Waleed Ajmal" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#0d1117" />
+  <link rel="canonical" href="{{ canonical_url }}" />
+
+  <!-- Icons & PWA manifest -->
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/static/site.webmanifest" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Receipt Spending Analyzer" />
+  <meta property="og:title" content="Receipt Spending Analyzer — read receipts with an LLM, get AI budget advice" />
+  <meta property="og:description" content="Snap a receipt, an LLM reads every crumpled line item, and out come clean categories, budgets and honest saving advice. A tidy self-hostable Flask API." />
+  <meta property="og:url" content="{{ canonical_url }}" />
+  <meta property="og:image" content="{{ base_url }}/static/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Receipt Spending Analyzer — a Flask API that turns receipt photos into budgets and AI advice." />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Receipt Spending Analyzer" />
+  <meta name="twitter:description" content="Snap a receipt, an LLM reads every line item, and out come clean categories, budgets and AI saving advice." />
+  <meta name="twitter:image" content="{{ base_url }}/static/og-image.png" />
+
+  <!-- Structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Receipt Spending Analyzer",
+    "description": "A self-hostable Flask API that reads receipt photos with an LLM, auto-categorises every line item, and turns them into reports, budgets and AI-powered saving advice.",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Any (Python 3.9+)",
+    "url": "{{ base_url }}/",
+    "image": "{{ base_url }}/static/og-image.png",
+    "license": "https://opensource.org/licenses/MIT",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Person", "name": "Waleed Ajmal" },
+    "featureList": [
+      "LLM receipt parsing (items, prices, vendor, date)",
+      "Automatic category matching",
+      "Workspaces and per-category budgets",
+      "Daily / weekly / monthly reports and charts",
+      "AI saving advice and a spending chatbot",
+      "CSV export"
+    ]
+  }
+  </script>
   <style>
     :root {
       --bg: #0d1117;
@@ -22,6 +79,27 @@
       --patch: #c084fc;
     }
     * { box-sizing: border-box; }
+
+    /* Visually-hidden but available to screen readers. */
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+    }
+    /* Skip link — first tab stop, jumps keyboard users past the header. */
+    .skip-link {
+      position: absolute; left: 12px; top: -60px; z-index: 100;
+      background: var(--accent); color: #04120a; padding: 10px 16px;
+      border-radius: 8px; font-weight: 700; text-decoration: none;
+      transition: top .15s ease;
+    }
+    .skip-link:focus { top: 12px; }
+
+    /* Clear, high-contrast keyboard focus indicator on every interactive element. */
+    a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
+      outline: 3px solid var(--accent-2);
+      outline-offset: 3px;
+      border-radius: 6px;
+    }
     body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -79,24 +157,78 @@
       display: flex; align-items: center; gap: 12px; padding: 11px 14px;
       background: var(--panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px;
       font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: .88rem;
+      cursor: pointer; position: relative;
+      transition: transform .13s ease, border-color .13s ease, background .13s ease;
     }
+    .ep:hover { transform: translateX(3px); border-color: var(--accent-2); background: var(--panel-2); }
+    .ep:active { transform: translateX(3px) scale(.995); }
+    .ep::after {
+      content: "⧉ copy"; margin-left: 6px; font-size: .68rem; letter-spacing: .04em;
+      color: var(--muted); opacity: 0; transition: opacity .13s ease;
+      font-family: -apple-system, sans-serif;
+    }
+    .ep:hover::after { opacity: .8; }
+    .ep.copied { border-color: var(--accent); }
+    .ep.copied::after { content: "✓ copied"; color: var(--accent); opacity: 1; }
     .m { font-weight: 700; font-size: .72rem; padding: 3px 8px; border-radius: 6px; min-width: 52px; text-align: center; letter-spacing: .04em; }
     .m.GET { color: var(--get); background: rgba(56,189,248,.12); }
     .m.POST { color: var(--post); background: rgba(74,222,128,.12); }
     .m.PUT { color: var(--put); background: rgba(251,191,36,.12); }
     .m.DELETE { color: var(--del); background: rgba(248,113,113,.12); }
     .m.PATCH { color: var(--patch); background: rgba(192,132,252,.12); }
-    .path { color: var(--text); overflow-x: auto; white-space: nowrap; }
+    .path { color: var(--text); overflow-x: auto; white-space: nowrap; min-width: 0; }
     .desc { color: var(--muted); margin-left: auto; font-family: -apple-system, sans-serif; font-size: .82rem; white-space: nowrap; }
-    @media (max-width: 620px) { .desc { display: none; } .ep { font-size: .8rem; } }
+    /* Narrow screens: instead of dropping the endpoint description entirely,
+       let each row wrap so the description sits on its own line, aligned under
+       the path. Keeps mobile users from losing what every endpoint does. */
+    @media (max-width: 620px) {
+      .ep { flex-wrap: wrap; row-gap: 4px; font-size: .8rem; }
+      .desc { margin-left: 0; flex-basis: 100%; white-space: normal;
+              padding-left: 64px; font-size: .78rem; }
+    }
+    @media (max-width: 360px) {
+      .wrap { padding: 0 14px 64px; }
+      .cta .btn { flex: 1 1 100%; justify-content: center; }
+      .desc { padding-left: 0; }
+    }
 
     footer { margin-top: 50px; padding-top: 22px; border-top: 1px solid var(--border); color: var(--muted); font-size: .85rem; }
+
+    /* Micro-interactions (content is always visible; motion is additive only) */
+    .card { transition: transform .14s ease, border-color .14s ease, background .14s ease; }
+    .card:hover { transform: translateY(-3px); border-color: var(--accent-2); background: var(--panel-2); }
+    .btn:active { transform: translateY(0) scale(.98); }
+
+    /* Toast */
+    .toast {
+      position: fixed; left: 50%; bottom: 30px; transform: translate(-50%, 20px);
+      background: var(--panel); border: 1px solid var(--accent); color: var(--text);
+      padding: 10px 18px; border-radius: 999px; font-size: .88rem; font-weight: 600;
+      box-shadow: 0 14px 40px rgba(0,0,0,.45); opacity: 0; pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease; z-index: 50;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    /* Respect users who prefer reduced motion — kill the pulse + hover lifts. */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+      .dot.live { animation: none; }
+      .card:hover, .ep:hover, .btn:hover { transform: none; }
+    }
   </style>
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to main content</a>
   <div class="wrap">
     <header>
-      <span class="badge"><span id="statusDot" class="dot"></span><span id="statusText">checking API…</span></span>
+      <p class="badge" role="status" aria-live="polite">
+        <span id="statusDot" class="dot" aria-hidden="true"></span>
+        <span id="statusText">Checking API status…</span>
+      </p>
       <h1>Receipt Spending Analyzer</h1>
       <p class="lede">
         Snap a receipt, let an LLM read every crumpled line item, and watch a shoebox
@@ -104,23 +236,25 @@
         A tidy Flask API — no database required.
       </p>
       <div class="cta">
-        <a class="btn primary" href="/upload">📸 Try the uploader</a>
-        <a class="btn" href="/v1/health">🩺 Health check</a>
+        <a class="btn primary" href="/upload"><span aria-hidden="true">📸</span> Try the uploader</a>
+        <a class="btn" href="/v1/health"><span aria-hidden="true">🩺</span> Health check</a>
       </div>
     </header>
 
-    <div class="grid">
-      <div class="card"><div class="ico">🧾</div><h3>Scan &amp; parse</h3><p>Vision LLM extracts items, prices, vendor &amp; date from a photo.</p></div>
-      <div class="card"><div class="ico">🏷️</div><h3>Auto-categorise</h3><p>Line items are matched to your workspace categories on the fly.</p></div>
-      <div class="card"><div class="ico">📊</div><h3>Reports &amp; charts</h3><p>Daily / weekly / monthly spend, pie &amp; bar chart data, CSV export.</p></div>
-      <div class="card"><div class="ico">🧠</div><h3>AI advice</h3><p>Budget overage alerts, predictive insights and a spending chatbot.</p></div>
-    </div>
+    <main id="main">
+    <h2 class="sr-only">Features</h2>
+    <ul class="grid" style="list-style:none;padding:0;">
+      <li class="card"><div class="ico" aria-hidden="true">🧾</div><h3>Scan &amp; parse</h3><p>Vision LLM extracts items, prices, vendor &amp; date from a photo.</p></li>
+      <li class="card"><div class="ico" aria-hidden="true">🏷️</div><h3>Auto-categorise</h3><p>Line items are matched to your workspace categories on the fly.</p></li>
+      <li class="card"><div class="ico" aria-hidden="true">📊</div><h3>Reports &amp; charts</h3><p>Daily / weekly / monthly spend, pie &amp; bar chart data, CSV export.</p></li>
+      <li class="card"><div class="ico" aria-hidden="true">🧠</div><h3>AI advice</h3><p>Budget overage alerts, predictive insights and a spending chatbot.</p></li>
+    </ul>
 
     <h2>API reference</h2>
     <p class="sub">Base URL <code>/v1</code> · Bearer token auth · JSON in, JSON out.</p>
 
     <div class="group">
-      <p class="group-title">Workspaces</p>
+      <h3 class="group-title">Workspaces</h3>
       <div class="ep"><span class="m POST">POST</span><span class="path">/v1/instances</span><span class="desc">Create workspace</span></div>
       <div class="ep"><span class="m GET">GET</span><span class="path">/v1/instances</span><span class="desc">List workspaces</span></div>
       <div class="ep"><span class="m GET">GET</span><span class="path">/v1/instances/&lt;id&gt;</span><span class="desc">Workspace details</span></div>
@@ -129,7 +263,7 @@
     </div>
 
     <div class="group">
-      <p class="group-title">Categories</p>
+      <h3 class="group-title">Categories</h3>
       <div class="ep"><span class="m POST">POST</span><span class="path">/v1/instances/&lt;id&gt;/initialize</span><span class="desc">Bulk seed categories</span></div>
       <div class="ep"><span class="m POST">POST</span><span class="path">/v1/instances/&lt;id&gt;/categories</span><span class="desc">Add category</span></div>
       <div class="ep"><span class="m PUT">PUT</span><span class="path">/v1/categories/&lt;cat_id&gt;</span><span class="desc">Rename category</span></div>
@@ -137,32 +271,64 @@
     </div>
 
     <div class="group">
-      <p class="group-title">Receipts</p>
+      <h3 class="group-title">Receipts</h3>
       <div class="ep"><span class="m POST">POST</span><span class="path">/v1/reciepts</span><span class="desc">Upload &amp; parse</span></div>
       <div class="ep"><span class="m GET">GET</span><span class="path">/v1/reciepts/&lt;id&gt;</span><span class="desc">Fetch parsed receipt</span></div>
       <div class="ep"><span class="m PATCH">PATCH</span><span class="path">/v1/reciepts/&lt;id&gt;</span><span class="desc">Correct line items</span></div>
     </div>
 
     <div class="group">
-      <p class="group-title">Transactions &amp; budgets</p>
+      <h3 class="group-title">Transactions &amp; budgets</h3>
       <div class="ep"><span class="m GET">GET</span><span class="path">/v1/instances/&lt;id&gt;/transactions</span><span class="desc">List transactions</span></div>
       <div class="ep"><span class="m POST">POST</span><span class="path">/v1/instances/&lt;id&gt;/budgets</span><span class="desc">Set budget limit</span></div>
       <div class="ep"><span class="m GET">GET</span><span class="path">/v1/instances/&lt;id&gt;/budgets</span><span class="desc">Budget utilisation</span></div>
     </div>
 
     <div class="group">
-      <p class="group-title">Reports &amp; insights</p>
+      <h3 class="group-title">Reports &amp; insights</h3>
       <div class="ep"><span class="m GET">GET</span><span class="path">/v1/instances/&lt;id&gt;/reports</span><span class="desc">Numeric report</span></div>
       <div class="ep"><span class="m GET">GET</span><span class="path">/v1/instances/&lt;id&gt;/graphs</span><span class="desc">Chart data</span></div>
       <div class="ep"><span class="m GET">GET</span><span class="path">/v1/instances/&lt;id&gt;/export</span><span class="desc">CSV export</span></div>
+      <div class="ep"><span class="m GET">GET</span><span class="path">/v1/instances/&lt;id&gt;/recurring</span><span class="desc">Detect recurring charges 📡</span></div>
       <div class="ep"><span class="m POST">POST</span><span class="path">/v1/instances/&lt;id&gt;/advice</span><span class="desc">AI saving advice</span></div>
       <div class="ep"><span class="m POST">POST</span><span class="path">/v1/instances/&lt;id&gt;/chat</span><span class="desc">Spending chatbot</span></div>
     </div>
+    </main>
 
     <footer>
       Receipt Spending Analyzer · Flask + pandas + OpenAI vision · built by Waleed Ajmal
     </footer>
   </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // Click any endpoint row to copy its path — with a toast + inline confirmation.
+    const toast = document.getElementById("toast");
+    let toastTimer;
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 1600);
+    }
+    document.querySelectorAll(".ep").forEach(ep => {
+      ep.addEventListener("click", async () => {
+        const pathEl = ep.querySelector(".path");
+        const method = (ep.querySelector(".m")?.textContent || "").trim();
+        const path = pathEl ? pathEl.textContent.trim() : "";
+        try {
+          await navigator.clipboard.writeText(path);
+        } catch (_) {
+          const r = document.createRange(); r.selectNodeContents(pathEl);
+          const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        }
+        ep.classList.add("copied");
+        showToast(`Copied ${method} ${path}`);
+        setTimeout(() => ep.classList.remove("copied"), 1400);
+      });
+    });
+  </script>
 
   <script>
     fetch("/v1/health")

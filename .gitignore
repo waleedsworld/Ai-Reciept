@@ -5,6 +5,12 @@ __pycache__/
 venv/
 env/
 
+# Packaging / build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
 # Local secrets & runtime data
 .env
 storage/
