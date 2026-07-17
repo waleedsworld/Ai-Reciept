@@ -4,7 +4,7 @@ from app.services.categories import rename_category,delete_category
 categories_dp = Blueprint("categories_bp",__name__)
 
 
-@categories_dp.route("/v1/categories/<id>",methods=['POST'])
+@categories_dp.route("/v1/categories/<id>",methods=['POST','PUT'])
 def rename_category_route(id):
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer'):

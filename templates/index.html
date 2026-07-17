@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Receipt Spending Analyzer API</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --panel-2: #1c232d;
+      --border: #2a3441;
+      --text: #e6edf3;
+      --muted: #8b98a5;
+      --accent: #4ade80;
+      --accent-2: #38bdf8;
+      --amber: #fbbf24;
+      --get: #38bdf8;
+      --post: #4ade80;
+      --put: #fbbf24;
+      --del: #f87171;
+      --patch: #c084fc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1200px 600px at 80% -10%, #14301f 0%, transparent 55%),
+                  radial-gradient(900px 500px at -10% 10%, #0e2436 0%, transparent 50%),
+                  var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+    .wrap { max-width: 940px; margin: 0 auto; padding: 0 20px 80px; }
+    header { padding: 68px 0 34px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--panel); border: 1px solid var(--border);
+      color: var(--muted); font-size: 13px; padding: 6px 12px; border-radius: 999px;
+    }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 0 rgba(74,222,128,.5); }
+    .dot.live { background: var(--accent); animation: pulse 2s infinite; }
+    .dot.down { background: var(--del); }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(74,222,128,.5); }
+      70% { box-shadow: 0 0 0 8px rgba(74,222,128,0); }
+      100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
+    }
+    h1 {
+      font-size: clamp(2rem, 6vw, 3.1rem); margin: 22px 0 10px; line-height: 1.08;
+      letter-spacing: -0.02em;
+      background: linear-gradient(120deg, #fff 20%, #8fe7b6 70%, #6fd0f5);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .lede { color: var(--muted); font-size: 1.12rem; max-width: 640px; }
+    .cta { margin-top: 26px; display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+      padding: 11px 18px; border-radius: 10px; font-weight: 600; font-size: 15px;
+      border: 1px solid var(--border); color: var(--text); background: var(--panel);
+      transition: transform .12s ease, border-color .12s ease;
+    }
+    .btn:hover { transform: translateY(-2px); border-color: var(--accent); }
+    .btn.primary { background: linear-gradient(120deg, #16a34a, #22c55e); border: none; color: #04120a; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin: 30px 0 12px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+    .card .ico { font-size: 22px; }
+    .card h3 { margin: 10px 0 6px; font-size: 1rem; }
+    .card p { margin: 0; color: var(--muted); font-size: .9rem; }
+
+    h2 { margin: 46px 0 6px; font-size: 1.35rem; letter-spacing: -0.01em; }
+    .sub { color: var(--muted); margin: 0 0 18px; font-size: .95rem; }
+
+    .group { margin-bottom: 22px; }
+    .group-title { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; }
+    .ep {
+      display: flex; align-items: center; gap: 12px; padding: 11px 14px;
+      background: var(--panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px;
+      font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: .88rem;
+    }
+    .m { font-weight: 700; font-size: .72rem; padding: 3px 8px; border-radius: 6px; min-width: 52px; text-align: center; letter-spacing: .04em; }
+    .m.GET { color: var(--get); background: rgba(56,189,248,.12); }
+    .m.POST { color: var(--post); background: rgba(74,222,128,.12); }
+    .m.PUT { color: var(--put); background: rgba(251,191,36,.12); }
+    .m.DELETE { color: var(--del); background: rgba(248,113,113,.12); }
+    .m.PATCH { color: var(--patch); background: rgba(192,132,252,.12); }
+    .path { color: var(--text); overflow-x: auto; white-space: nowrap; }
+    .desc { color: var(--muted); margin-left: auto; font-family: -apple-system, sans-serif; font-size: .82rem; white-space: nowrap; }
+    @media (max-width: 620px) { .desc { display: none; } .ep { font-size: .8rem; } }
+
+    footer { margin-top: 50px; padding-top: 22px; border-top: 1px solid var(--border); color: var(--muted); font-size: .85rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="badge"><span id="statusDot" class="dot"></span><span id="statusText">checking API…</span></span>
+      <h1>Receipt Spending Analyzer</h1>
+      <p class="lede">
+        Snap a receipt, let an LLM read every crumpled line item, and watch a shoebox
+        of paper turn into clean categories, budgets and honest-to-goodness saving advice.
+        A tidy Flask API — no database required.
+      </p>
+      <div class="cta">
+        <a class="btn primary" href="/upload">📸 Try the uploader</a>
+        <a class="btn" href="/v1/health">🩺 Health check</a>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div class="card"><div class="ico">🧾</div><h3>Scan &amp; parse</h3><p>Vision LLM extracts items, prices, vendor &amp; date from a photo.</p></div>
+      <div class="card"><div class="ico">🏷️</div><h3>Auto-categorise</h3><p>Line items are matched to your workspace categories on the fly.</p></div>
+      <div class="card"><div class="ico">📊</div><h3>Reports &amp; charts</h3><p>Daily / weekly / monthly spend, pie &amp; bar chart data, CSV export.</p></div>
+      <div class="card"><div class="ico">🧠</div><h3>AI advice</h3><p>Budget overage alerts, predictive insights and a spending chatbot.</p></div>
+    </div>
+
+    <h2>API reference</h2>
+    <p class="sub">Base URL <code>/v1</code> · Bearer token auth · JSON in, JSON out.</p>
+
+    <div class="group">
+      <p class="group-title">Workspaces</p>
+      <div class="ep"><span class="m POST">POST</span><span class="path">/v1/instances</span><span class="desc">Create workspace</span></div>
+      <div class="ep"><span class="m GET">GET</span><span class="path">/v1/instances</span><span class="desc">List workspaces</span></div>
+      <div class="ep"><span class="m GET">GET</span><span class="path">/v1/instances/&lt;id&gt;</span><span class="desc">Workspace details</span></div>
+      <div class="ep"><span class="m PUT">PUT</span><span class="path">/v1/instances/&lt;id&gt;</span><span class="desc">Rename / archive</span></div>
+      <div class="ep"><span class="m DELETE">DELETE</span><span class="path">/v1/instances/&lt;id&gt;</span><span class="desc">Delete workspace</span></div>
+    </div>
+
+    <div class="group">
+      <p class="group-title">Categories</p>
+      <div class="ep"><span class="m POST">POST</span><span class="path">/v1/instances/&lt;id&gt;/initialize</span><span class="desc">Bulk seed categories</span></div>
+      <div class="ep"><span class="m POST">POST</span><span class="path">/v1/instances/&lt;id&gt;/categories</span><span class="desc">Add category</span></div>
+      <div class="ep"><span class="m PUT">PUT</span><span class="path">/v1/categories/&lt;cat_id&gt;</span><span class="desc">Rename category</span></div>
+      <div class="ep"><span class="m DELETE">DELETE</span><span class="path">/v1/categories/&lt;cat_id&gt;</span><span class="desc">Delete category</span></div>
+    </div>
+
+    <div class="group">
+      <p class="group-title">Receipts</p>
+      <div class="ep"><span class="m POST">POST</span><span class="path">/v1/reciepts</span><span class="desc">Upload &amp; parse</span></div>
+      <div class="ep"><span class="m GET">GET</span><span class="path">/v1/reciepts/&lt;id&gt;</span><span class="desc">Fetch parsed receipt</span></div>
+      <div class="ep"><span class="m PATCH">PATCH</span><span class="path">/v1/reciepts/&lt;id&gt;</span><span class="desc">Correct line items</span></div>
+    </div>
+
+    <div class="group">
+      <p class="group-title">Transactions &amp; budgets</p>
+      <div class="ep"><span class="m GET">GET</span><span class="path">/v1/instances/&lt;id&gt;/transactions</span><span class="desc">List transactions</span></div>
+      <div class="ep"><span class="m POST">POST</span><span class="path">/v1/instances/&lt;id&gt;/budgets</span><span class="desc">Set budget limit</span></div>
+      <div class="ep"><span class="m GET">GET</span><span class="path">/v1/instances/&lt;id&gt;/budgets</span><span class="desc">Budget utilisation</span></div>
+    </div>
+
+    <div class="group">
+      <p class="group-title">Reports &amp; insights</p>
+      <div class="ep"><span class="m GET">GET</span><span class="path">/v1/instances/&lt;id&gt;/reports</span><span class="desc">Numeric report</span></div>
+      <div class="ep"><span class="m GET">GET</span><span class="path">/v1/instances/&lt;id&gt;/graphs</span><span class="desc">Chart data</span></div>
+      <div class="ep"><span class="m GET">GET</span><span class="path">/v1/instances/&lt;id&gt;/export</span><span class="desc">CSV export</span></div>
+      <div class="ep"><span class="m POST">POST</span><span class="path">/v1/instances/&lt;id&gt;/advice</span><span class="desc">AI saving advice</span></div>
+      <div class="ep"><span class="m POST">POST</span><span class="path">/v1/instances/&lt;id&gt;/chat</span><span class="desc">Spending chatbot</span></div>
+    </div>
+
+    <footer>
+      Receipt Spending Analyzer · Flask + pandas + OpenAI vision · built by Waleed Ajmal
+    </footer>
+  </div>
+
+  <script>
+    fetch("/v1/health")
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(d => {
+        document.getElementById("statusDot").className = "dot live";
+        document.getElementById("statusText").textContent = "API online · " + (d.status || "ok");
+      })
+      .catch(() => {
+        document.getElementById("statusDot").className = "dot down";
+        document.getElementById("statusText").textContent = "API offline";
+      });
+  </script>
+</body>
+</html>
