@@ -13,8 +13,8 @@ def upload_and_parse_reciept_route():
         instance_id = request.form.get("instance_id")
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Bearer'):
-            return jsonify({'error','invalid token'}),404
-        
+            return jsonify({'error': 'invalid token'}), 401
+
         token = auth_header.split(' ')[1]
 
         if not file:

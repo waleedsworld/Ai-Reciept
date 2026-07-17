@@ -14,7 +14,8 @@ RECIEPT_FILE = 'receipts.json'
 def upload_and_parse_reciept(token,instance_id, file):
     # Step 1: Save uploaded image and generate receipt_id
     receipt_id, path = save_receipt_image(file)
-    img_url = path.split('\\')[1]
+    # Use the bare filename so it works on Windows, macOS and Linux alike.
+    img_url = os.path.basename(path)
 
     # Step 2: Parse the receipt
     extracted_json = reciept_parser(img_url, instance_id)
