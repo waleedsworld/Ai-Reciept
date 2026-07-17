@@ -1,146 +1,216 @@
-# Receipt Spending Analyzer API
+# 🧾 Receipt Spending Analyzer
 
-## 📌 Introduction
+> Snap a receipt, let an LLM read every crumpled line item, and watch a shoebox of paper
+> turn into clean categories, budgets and honest-to-goodness saving advice.
 
-The **Receipt Spending Analyzer API** is a Flask-based service that allows users to scan receipts, automatically categorize purchases using AI, generate insightful spending reports, and receive personalized financial advice. It integrates LLM-based categorization, CSV-based storage for lightweight persistence, and data visualization capabilities to help users better understand and optimize their spending habits.
+A tidy little **Flask** API that does the boring part of budgeting for you. Upload a photo of a
+receipt, a vision model extracts each item, price, vendor and date, matches everything to your own
+spending categories, and then hands you reports, charts, budget alerts and an AI advisor that
+actually knows what you bought. No database, no heavyweight setup — just CSV and JSON files on disk.
 
----
+<p align="center">
+  <img src="docs/media/landing-desktop.png" alt="Receipt Spending Analyzer landing page" width="100%" />
+</p>
 
-## ✨ Features
-
-* **Workspace Management** – Create, list, update, and delete budget workspaces.
-* **Category Management** – Add, rename, and remove expense categories.
-* **Receipt Processing** – Upload, parse, and correct scanned receipts.
-* **Transactions & Budgets** – Query transactions and set spending limits.
-* **Reports & Analytics** – Generate numeric reports, charts, and CSV exports.
-* **AI Insights & Advice** – Get spending forecasts, anomaly detection, and tips.
-* **Health Check** – Ensure the service is running.
-
----
-
-## 🛠 Tech Stack
-
-* **Backend Framework**: Flask (Python)
-* **AI Processing**: OpenAI API
-* **Data Handling**: Pandas (CSV-based storage)
-* **Image Processing**: OpenAI Vision / Multi-Modal LLM
-* **Visualization**: Matplotlib / Plotly
-* **Environment**: Python 3.9+
+<p align="center">
+  <img src="docs/media/upload-desktop.png" alt="Receipt upload page" width="60%" />
+  &nbsp;
+  <img src="docs/media/landing-mobile.png" alt="Mobile layout" width="30%" />
+</p>
 
 ---
 
-## 📡 API Endpoints
+## ✨ What it does
 
-### **1 Workspace / Instance Management**
+- **🧾 Scan & parse** — a vision LLM pulls items, prices, vendor and purchase date straight from a photo.
+- **🏷️ Auto-categorise** — every line item is matched to your workspace's categories, and brand-new
+  categories are created on the fly when nothing fits.
+- **📁 Workspaces** — keep separate budgets (personal, business, "that trip to Karachi") side by side.
+- **💸 Transactions & budgets** — query spending and set per-category limits with utilisation tracking.
+- **📊 Reports & charts** — daily / weekly / monthly totals, top items, top categories, plus pie / bar /
+  line chart data and one-click CSV export.
+- **🧠 AI insights & advice** — personalised saving suggestions, budget-overage detection and a
+  conversational chatbot that answers questions about *your* spending.
+- **🩺 Health check** — a plain liveness endpoint for your uptime monitor.
 
-* `POST /v1/instances` – Create Workspace
-* `GET /v1/instances` – List Workspaces
-* `GET /v1/instances/{id}` – Get Workspace Details
-* `PUT /v1/instances/{id}` – Rename / Update Workspace
-* `DELETE /v1/instances/{id}` – Delete Workspace
-
-### **2 Category Management**
-
-* `POST /v1/instances/{id}/initialize` – Bulk Initialise Categories
-* `POST /v1/instances/{id}/categories` – Add Single Category
-* `PUT /v1/categories/{cat_id}` – Rename Category
-* `DELETE /v1/categories/{cat_id}` – Delete Category
-
-### **3 Receipt Upload & Parsing**
-
-* `POST /v1/receipts` – Upload & Parse Receipt
-* `GET /v1/receipts/{receipt_id}` – Retrieve Parsed Receipt
-* `PATCH /v1/receipts/{receipt_id}` – Correct Parsed Receipt
-
-### **4 Transactions & Budgets**
-
-* `GET /v1/instances/{id}/transactions` – List Transactions
-* `POST /v1/instances/{id}/budgets` – Create / Update Budget
-* `GET /v1/instances/{id}/budgets` – Get Budget Utilisation
-
-### **5 Reports, Graphs, Export**
-
-* `GET /v1/instances/{id}/reports` – Numeric Reports
-* `GET /v1/instances/{id}/graphs` – Chart Generator
-* `GET /v1/instances/{id}/export` – CSV Export
-
-### **6 Insights & Advice**
-
-* `POST /v1/instances/{id}/advice` – Generate Advice
-* `POST /v1/instances/{id}/chat` – Conversational Chat
-* `GET /v1/instances/{id}/insights` – Predictive Insights
-
-### **7 Health Check**
-
-* `GET /v1/health` – Service Liveness
+Everything persists to lightweight files under `storage/` — perfect for a demo, a hackathon, or a
+self-hosted personal tool.
 
 ---
 
-## 🔑 Environment Variables
+## 🏗️ How it's built
 
-Create a `.env` file in the root of the project:
+| Layer            | Choice                                             |
+| ---------------- | -------------------------------------------------- |
+| Web framework    | Flask 3 (blueprint-per-domain)                     |
+| AI               | OpenAI (vision for parsing, chat for advice)       |
+| Data crunching   | pandas over CSV / JSON files — no DB to babysit    |
+| Charts           | matplotlib (headless `Agg` backend)                |
+| Config           | `python-dotenv` (`.env`)                           |
 
-```env
-OPENAI_API_KEY=your_openai_api_key_here
+The code is organised so each concern lives in its own place:
+
+```
+app/
+├── routes/        # thin HTTP handlers (one blueprint per area)
+├── services/      # the actual business logic
+│   └── aggregators/   # report math: items, categories, summaries
+└── utils/         # LLM calls, image saving, CSV queries
+templates/         # landing page + receipt uploader
+run.py             # app factory + entry point
 ```
 
 ---
 
-## ⚙️ Installation Guide
+## 🚀 Get it running (5 minutes, promise)
 
-### 1️⃣ Clone the Repository
+### Prerequisites
+
+- **Python 3.9+** (developed on 3.11) — check with `python3 --version`
+- **pip** and the ability to make a virtual environment
+- An **OpenAI API key** — *only* needed for the AI features (parsing, advice, chat). The workspace,
+  category, transaction and report endpoints work perfectly fine without one.
+
+### 1. Clone & enter
 
 ```bash
-git clone https://github.com/yourusername/receipt-spending-analyzer.git
-cd receipt-spending-analyzer
+git clone https://github.com/waleedsworld/Ai-Reciept.git
+cd Ai-Reciept
 ```
 
-### 2️⃣ Create a Virtual Environment
+### 2. Create and activate a virtual environment
 
 ```bash
-python -m venv venv
+python3 -m venv .venv
+
+# macOS / Linux
+source .venv/bin/activate
+
+# Windows (PowerShell)
+.venv\Scripts\Activate.ps1
 ```
 
-### 3️⃣ Activate the Environment
-
-* **Windows**
-
-```bash
-venv\Scripts\activate
-```
-
-* **Mac/Linux**
-
-```bash
-source venv/bin/activate
-```
-
-### 4️⃣ Install Dependencies
+### 3. Install the dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 5️⃣ Set Environment Variables
-
-Create `.env` file and add:
-
-```env
-OPENAI_API_KEY=your_openai_api_key_here
-```
-
-### 6️⃣ Run the Flask Server
+### 4. Add your API key
 
 ```bash
-flask run
+cp .env.example .env
+# then open .env and paste your key:
+# OPENAI_API_KEY=sk-...
 ```
 
-The API will be available at `http://127.0.0.1:5000`.
+### 5. Run it
+
+```bash
+python run.py
+```
+
+Open **http://127.0.0.1:5000** and you'll get the friendly landing page with a live API map. That's it! 🎉
+
+> Want a different port? `PORT=8080 python run.py`.
+
+### Kick the tyres without a key
+
+There's a zero-dependency-on-OpenAI smoke test that creates a workspace, seeds categories and reads
+them back:
+
+```bash
+python test.py
+```
+
+---
+
+## 📡 API reference
+
+Base URL is `/v1`. Auth is a bearer token (`Authorization: Bearer <token>`) — in this reference
+build the token doubles as the user id, so pick any string and stay consistent.
+
+### Workspaces
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/v1/instances` | Create a workspace |
+| `GET` | `/v1/instances` | List your workspaces |
+| `GET` | `/v1/instances/<id>` | Workspace details + total spend |
+| `PUT` | `/v1/instances/<id>` | Rename / archive |
+| `DELETE` | `/v1/instances/<id>` | Delete a workspace |
+
+### Categories
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/v1/instances/<id>/initialize` | Bulk-seed categories (comma separated) |
+| `POST` | `/v1/instances/<id>/categories` | Add one category |
+| `PUT` / `POST` | `/v1/categories/<cat_id>` | Rename a category |
+| `DELETE` | `/v1/categories/<cat_id>` | Delete a category |
+
+### Receipts
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/v1/reciepts` | Upload an image → parsed + categorised items |
+| `GET` | `/v1/reciepts/<id>` | Fetch a parsed receipt |
+| `PATCH` | `/v1/reciepts/<id>` | Correct line items and re-sync the CSV |
+
+### Transactions & budgets
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/v1/instances/<id>/transactions` | List transactions |
+| `POST` | `/v1/instances/<id>/budgets` | Create / update a category budget |
+| `GET` | `/v1/instances/<id>/budgets` | Budget utilisation (spent vs limit) |
+
+### Reports & insights
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/v1/instances/<id>/reports` | Numeric report (`?period=weekly\|monthly\|custom`) |
+| `GET` | `/v1/instances/<id>/graphs` | Chart-ready data |
+| `GET` | `/v1/instances/<id>/export` | Stream the raw CSV |
+| `POST` | `/v1/instances/<id>/advice` | Generate saving advice |
+| `POST` | `/v1/instances/<id>/chat` | Chat about your spending |
+| `GET` | `/v1/health` | Liveness check |
+
+### Try it with curl
+
+```bash
+# 1. Create a workspace
+curl -X POST http://127.0.0.1:5000/v1/instances \
+  -H "Authorization: Bearer me" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"My Budget"}'
+
+# 2. Seed some categories (use the instance_id from step 1)
+curl -X POST http://127.0.0.1:5000/v1/instances/<id>/initialize \
+  -H "Authorization: Bearer me" \
+  -H "Content-Type: application/json" \
+  -d '{"categories":"Groceries, Transport, Coffee"}'
+
+# 3. Upload a receipt (needs OPENAI_API_KEY)
+curl -X POST http://127.0.0.1:5000/v1/reciepts \
+  -H "Authorization: Bearer me" \
+  -F "reciept=@receipt.jpg" \
+  -F "instance_id=<id>"
+```
+
+Prefer clicking? Head to **/upload** for a drag-and-drop uploader that shows the parsed JSON inline.
+
+---
+
+## 🌐 Live demo
+
+Live demo — deploying soon.
+
+---
+
+## 🗺️ Roadmap ideas
+
+- Swap CSV storage for SQLite when a workspace gets big.
+- Multi-currency support (totals currently assume PKR).
+- Recurring-charge detection ("you've paid Netflix 3 months running").
 
 ---
 
 ## 📜 License
 
-This project is licensed under the **MIT License** – you’re free to use, modify, and distribute it as long as attribution is provided.
-
-
+MIT — use it, fork it, expense it. Attribution appreciated.
