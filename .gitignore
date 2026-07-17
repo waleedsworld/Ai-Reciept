@@ -1,4 +1,14 @@
-venv
-storage
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Local secrets & runtime data
 .env
-__pycache__
+storage/
+
+# OS cruft
+.DS_Store
+._*
